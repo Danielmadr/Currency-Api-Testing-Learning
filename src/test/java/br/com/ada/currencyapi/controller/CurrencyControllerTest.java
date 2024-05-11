@@ -6,9 +6,7 @@ import br.com.ada.currencyapi.domain.ConvertCurrencyResponse;
 import br.com.ada.currencyapi.domain.CurrencyRequest;
 import br.com.ada.currencyapi.domain.CurrencyResponse;
 import br.com.ada.currencyapi.service.CurrencyService;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,7 +17,6 @@ import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
@@ -27,9 +24,12 @@ import java.util.ArrayList;
 
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
@@ -50,7 +50,7 @@ class CurrencyControllerTest {
     mockMvc = MockMvcBuilders.standaloneSetup(currencyController).build();
 
     coins.add(CurrencyResponse.builder().label("1 - DMA").build());
-    coins.add(CurrencyResponse  .builder().label("2 - BTC").build());
+    coins.add(CurrencyResponse.builder().label("2 - BTC").build());
   }
 
   @Test
@@ -58,18 +58,13 @@ class CurrencyControllerTest {
   void getSuccess() throws Exception {
     Mockito.when(currencyService.get()).thenReturn(coins);
 
-    MvcResult result = mockMvc.perform(get("/currency"))
+    mockMvc.perform(get("/currency")
+                    .contentType(MediaType.APPLICATION_JSON))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$", hasSize(2)))
+            .andExpect(jsonPath("$[0].label", is("1 - DMA")))
+            .andExpect(jsonPath("$[1].label", is("2 - BTC")))
             .andReturn();
-
-    String content = result.getResponse().getContentAsString();
-    List<CurrencyResponse> response = new ObjectMapper().readValue(content, new TypeReference<>() {
-
-    });
-
-    Assertions.assertEquals(2, response.size());
-    Assertions.assertEquals("1 - DMA", response.get(0).getLabel());
-    Assertions.assertEquals("2 - BTC", response.get(1).getLabel());
   }
 
   @Test
@@ -79,15 +74,11 @@ class CurrencyControllerTest {
 
     Mockito.when(currencyService.convert(Mockito.any(ConvertCurrencyRequest.class))).thenReturn(response);
 
-    MvcResult result = mockMvc.perform(get("/currency/convert", Mockito.any(ConvertCurrencyRequest.class)))
+    mockMvc.perform(get("/currency/convert", Mockito.any(ConvertCurrencyRequest.class)))
             .andExpect(status().isOk())
+            .andExpect(jsonPath("$.amount", is(10)))
             .andReturn();
-
-    ConvertCurrencyResponse resultResponse = new ObjectMapper()
-            .readValue(result.getResponse().getContentAsString(), ConvertCurrencyResponse.class);
-
-    Assertions.assertEquals(BigDecimal.TEN, resultResponse.getAmount());
-}
+  }
 
   @Test
   @DisplayName("Create Success")
@@ -97,15 +88,12 @@ class CurrencyControllerTest {
     CurrencyRequest request = CurrencyRequest.builder().build();
     String jsonRequest = new ObjectMapper().writeValueAsString(request);
 
-    MvcResult result = mockMvc.perform(post("/currency")
-            .contentType(MediaType.APPLICATION_JSON)
-            .content(jsonRequest))
+    mockMvc.perform(post("/currency")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(jsonRequest))
+            .andExpect(status().isCreated())
+            .andExpect(jsonPath("$", is(1)))
             .andReturn();
-
-    Long response = new ObjectMapper()
-            .readValue(result.getResponse().getContentAsString(), Long.class);
-
-    Assertions.assertEquals(1L, response);
   }
 
   @Test
@@ -113,7 +101,7 @@ class CurrencyControllerTest {
   void deleteSuccess() throws Exception {
     Mockito.doNothing().when(currencyService).delete(Mockito.anyLong());
 
-   mockMvc.perform(delete("/currency/{id}", Mockito.anyLong())).andExpect(status().isOk()).andReturn();
+    mockMvc.perform(delete("/currency/{id}", Mockito.anyLong())).andExpect(status().isOk()).andReturn();
 
 
     Mockito.verify(currencyService, Mockito.times(1)).delete(Mockito.anyLong());
