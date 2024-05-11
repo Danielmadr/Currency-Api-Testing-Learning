@@ -19,7 +19,7 @@ import java.util.List;
 @SpringBootTest
 @Transactional
 @ActiveProfiles("test")
-class CurrencyServiceTestIT {
+class CurrencyServiceIT {
 
   @Autowired
   private CurrencyRepository currencyRepository;
