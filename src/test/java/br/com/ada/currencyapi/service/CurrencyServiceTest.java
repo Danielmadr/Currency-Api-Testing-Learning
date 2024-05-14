@@ -1,9 +1,7 @@
 package br.com.ada.currencyapi.service;
 
-import br.com.ada.currencyapi.domain.ConvertCurrencyRequest;
+import br.com.ada.currencyapi.domain.*;
 import br.com.ada.currencyapi.domain.Currency;
-import br.com.ada.currencyapi.domain.CurrencyRequest;
-import br.com.ada.currencyapi.domain.CurrencyResponse;
 import br.com.ada.currencyapi.exception.CoinNotFoundException;
 import br.com.ada.currencyapi.exception.CurrencyException;
 import br.com.ada.currencyapi.repository.CurrencyRepository;
@@ -26,6 +24,9 @@ class CurrencyServiceTest {
 
   @Mock
   private CurrencyRepository currencyRepository;
+
+  @Mock
+  private CurrencyClient currencyClient;
 
   @InjectMocks
   private CurrencyService currencyService;
@@ -130,5 +131,20 @@ class CurrencyServiceTest {
 
     CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class, () -> currencyService.convert(request));
     Assertions.assertEquals("Coin not found: DMA", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("Convert Success")
+  void convertExchangeComesFromAPI() {
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder().to("USD").from("BRL").amount(BigDecimal.ONE).build();
+    CurrencyAPIResponse obj = CurrencyAPIResponse.builder().low(BigDecimal.TEN).build();
+    Map<String, CurrencyAPIResponse> response = new HashMap<>();
+    response.put("USDBRL", obj);
+
+    Mockito.when(currencyRepository.findByName(Mockito.anyString())).thenReturn(coins.get(0));
+    Mockito.when(currencyClient.getCurrency(Mockito.anyString())).thenReturn(response);
+
+    Assertions.assertEquals(BigDecimal.TEN, currencyService.convertWithAwesomeApi(request).getAmount());
+    Mockito.verify(currencyRepository, Mockito.times(1)).findByName(Mockito.anyString());
   }
 }

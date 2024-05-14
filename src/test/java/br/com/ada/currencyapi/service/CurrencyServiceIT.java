@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 
 
-@SpringBootTest
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @Transactional
 @ActiveProfiles("test")
 class CurrencyServiceIT {
@@ -31,18 +31,27 @@ class CurrencyServiceIT {
   public void setUp() {
     List<Currency> currencies = new ArrayList<>();
     currencies.add(Currency.builder()
-        .name("BTC")
-        .description("Bitcoin")
-        .exchanges(new HashMap<>())
-        .build());
-    currencies.get(0).getExchanges().put("ETM", BigDecimal.valueOf(0.1));
+            .name("BTC")
+            .description("Bitcoin")
+            .exchanges(new HashMap<>())
+            .build());
+    currencies.get(0).getExchanges().put("USD", BigDecimal.valueOf(0.1));
     currencies.add(Currency.builder()
-        .name("ETM")
-        .description("Ethereum")
-        .exchanges(new HashMap<>())
-        .build());
-    currencies.get(1).getExchanges().put("BTC", BigDecimal.TEN);
+            .name("BRL")
+            .description("Real")
+            .exchanges(new HashMap<>())
+            .build());
+    currencies.add(Currency.builder()
+            .name("USD")
+            .description("Dollar")
+            .exchanges(new HashMap<>())
+            .build());
     currencyRepository.saveAll(currencies);
+  }
+
+  @AfterEach
+  public void tearDown() {
+    currencyRepository.deleteAll();
   }
 
   @Test
@@ -50,9 +59,9 @@ class CurrencyServiceIT {
   void getSuccess() {
     List<CurrencyResponse> currencies = currencyService.get();
 
-    Assertions.assertEquals(2, currencies.size());
+    Assertions.assertEquals(3, currencies.size());
     Assertions.assertEquals("1 - BTC", currencies.get(0).getLabel());
-    Assertions.assertEquals("2 - ETM", currencies.get(1).getLabel());
+    Assertions.assertEquals("2 - BRL", currencies.get(1).getLabel());
   }
 
   @Test
@@ -64,10 +73,10 @@ class CurrencyServiceIT {
 
     List<Currency> currencies = currencyRepository.findAll();
 
-    Assertions.assertEquals(3, currencies.size());
-    Assertions.assertEquals(id, currencies.get(2).getId());
-    Assertions.assertEquals("DAM", currencies.get(2).getName());
-    Assertions.assertEquals("Domain Currency", currencies.get(2).getDescription());
+    Assertions.assertEquals(4, currencies.size());
+    Assertions.assertEquals(id, currencies.get(3).getId());
+    Assertions.assertEquals("DAM", currencies.get(3).getName());
+    Assertions.assertEquals("Domain Currency", currencies.get(3).getDescription());
 
   }
 
@@ -81,11 +90,11 @@ class CurrencyServiceIT {
     Assertions.assertEquals("Coin already exists", exception.getMessage());
 
     List<Currency> currencies = currencyRepository.findAll();
-    Assertions.assertEquals(2, currencies.size());
+    Assertions.assertEquals(3, currencies.size());
     Assertions.assertEquals("BTC", currencies.get(0).getName());
     Assertions.assertEquals("Bitcoin", currencies.get(0).getDescription());
-    Assertions.assertEquals("ETM", currencies.get(1).getName());
-    Assertions.assertEquals("Ethereum", currencies.get(1).getDescription());
+    Assertions.assertEquals("BRL", currencies.get(1).getName());
+    Assertions.assertEquals("Real", currencies.get(1).getDescription());
   }
 
   @Test
@@ -96,41 +105,42 @@ class CurrencyServiceIT {
     currencyService.delete(idToDelete);
 
     List<Currency> currencies = currencyRepository.findAll();
-    Assertions.assertEquals(1, currencies.size());
-    Assertions.assertEquals("ETM", currencies.get(0).getName());
-    Assertions.assertEquals("Ethereum", currencies.get(0).getDescription());
+    Assertions.assertEquals(2, currencies.size());
+    Assertions.assertEquals("BRL", currencies.get(0).getName());
+    Assertions.assertEquals("Real", currencies.get(0).getDescription());
   }
 
   @Test
   @DisplayName("Delete a Currency that does not exist")
   void deleteNotExists() {
-    Long idToDelete = 3L;
+    Long idToDelete = 4L;
 
     CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class,
             () -> currencyService.delete(idToDelete));
 
-    Assertions.assertEquals("Coin not found: 3", exception.getMessage());
+    Assertions.assertEquals("Coin not found: 4", exception.getMessage());
 
     List<Currency> currencies = currencyRepository.findAll();
-    Assertions.assertEquals(2, currencies.size());
+    Assertions.assertEquals(3, currencies.size());
     Assertions.assertEquals("BTC", currencies.get(0).getName());
     Assertions.assertEquals("Bitcoin", currencies.get(0).getDescription());
-    Assertions.assertEquals("ETM", currencies.get(1).getName());
-    Assertions.assertEquals("Ethereum", currencies.get(1).getDescription());
+    Assertions.assertEquals("BRL", currencies.get(1).getName());
+    Assertions.assertEquals("Real", currencies.get(1).getDescription());
   }
 
   @Test
   @DisplayName("Convert currency Success")
   void convertSuccess() {
     ConvertCurrencyRequest request = ConvertCurrencyRequest.builder()
-            .to("BTC")
-            .from("ETM")
+            .to("USD")
+            .from("BTC")
             .amount(BigDecimal.TEN).build();
 
     ConvertCurrencyResponse response = currencyService.convert(request);
 
-    Assertions.assertEquals(BigDecimal.valueOf(100), response.getAmount());
+    Assertions.assertEquals(BigDecimal.valueOf(1.0), response.getAmount());
   }
+
   @Test
   @DisplayName("Convert currency That Does Not Exists")
   void convertNotExists() {
@@ -139,7 +149,7 @@ class CurrencyServiceIT {
             .from("DMA")//not exist
             .amount(BigDecimal.TEN).build();
 
-    CoinNotFoundException  exception = Assertions.assertThrows(CoinNotFoundException.class,
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class,
             () -> currencyService.convert(request));
 
     Assertions.assertEquals("Coin not found: DMA", exception.getMessage());
@@ -150,13 +160,26 @@ class CurrencyServiceIT {
   void convertFromExistToNotExist() {
     ConvertCurrencyRequest request = ConvertCurrencyRequest.builder()
             .to("DMA") //not exist
-            .from("ETM")
+            .from("USD")
             .amount(BigDecimal.TEN).build();
 
-    CoinNotFoundException  exception = Assertions.assertThrows(CoinNotFoundException.class,
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class,
             () -> currencyService.convert(request));
 
-   Assertions.assertEquals("Exchange DMA not found for ETM", exception.getMessage());
+    Assertions.assertEquals("Exchange DMA not found for USD", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("Convert currency by API Success")
+  void convertWithAPISuccess() {
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder()
+            .to("BRL")
+            .from("USD")
+            .amount(BigDecimal.TEN).build();
+
+    ConvertCurrencyResponse response = currencyService.convertWithAwesomeApi(request);
+
+    Assertions.assertNotNull(response);
   }
 
 }

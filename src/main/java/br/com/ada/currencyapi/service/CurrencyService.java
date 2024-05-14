@@ -1,27 +1,28 @@
 package br.com.ada.currencyapi.service;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+
+import br.com.ada.currencyapi.domain.*;
+import br.com.ada.currencyapi.domain.Currency;
+
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.stereotype.Service;
 
-import br.com.ada.currencyapi.domain.ConvertCurrencyRequest;
-import br.com.ada.currencyapi.domain.ConvertCurrencyResponse;
-import br.com.ada.currencyapi.domain.Currency;
-import br.com.ada.currencyapi.domain.CurrencyRequest;
-import br.com.ada.currencyapi.domain.CurrencyResponse;
 import br.com.ada.currencyapi.exception.CoinNotFoundException;
 import br.com.ada.currencyapi.exception.CurrencyException;
 import br.com.ada.currencyapi.repository.CurrencyRepository;
-import lombok.RequiredArgsConstructor;
+
 
 @Service
 @RequiredArgsConstructor
 public class CurrencyService {
 
     private final CurrencyRepository currencyRepository;
+
+    private final CurrencyClient currencyClient;
+
 
     public List<CurrencyResponse> get() {
         List<Currency> currencies = currencyRepository.findAll();
@@ -73,6 +74,31 @@ public class CurrencyService {
         }
 
         BigDecimal exchange = from.getExchanges().get(request.getTo());
+
+        if (Objects.isNull(exchange)) {
+            throw new CoinNotFoundException(String.format("Exchange %s not found for %s", request.getTo(), request.getFrom()));
+        }
+
+        return request.getAmount().multiply(exchange);
+    }
+
+    public ConvertCurrencyResponse convertWithAwesomeApi(ConvertCurrencyRequest request) throws CoinNotFoundException {
+        BigDecimal amount = getAmountWithAwesomeApi(request);
+        return ConvertCurrencyResponse.builder()
+                .amount(amount)
+                .build();
+
+    }
+
+    private BigDecimal getAmountWithAwesomeApi(ConvertCurrencyRequest request) throws CoinNotFoundException {
+        Currency from = currencyRepository.findByName(request.getFrom());
+
+        if (Objects.isNull(from)) {
+            throw new CoinNotFoundException(String.format("Coin not found: %s", request.getFrom()));
+        }
+
+        String tag = request.getTo() + "-" + request.getFrom();
+        BigDecimal exchange = currencyClient.getCurrency(tag).get(tag.replace("-", "")).low();
 
         if (Objects.isNull(exchange)) {
             throw new CoinNotFoundException(String.format("Exchange %s not found for %s", request.getTo(), request.getFrom()));

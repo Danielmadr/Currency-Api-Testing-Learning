@@ -36,7 +36,7 @@ public class CurrencyController {
     }
 
     @GetMapping("/convert")
-    public ResponseEntity<ConvertCurrencyResponse> convert(ConvertCurrencyRequest request) throws CoinNotFoundException {
+    public ResponseEntity<ConvertCurrencyResponse> convert(@RequestBody ConvertCurrencyRequest request) throws CoinNotFoundException {
         return new ResponseEntity<>(currencyService.convert(request), HttpStatus.OK);
     }
 
