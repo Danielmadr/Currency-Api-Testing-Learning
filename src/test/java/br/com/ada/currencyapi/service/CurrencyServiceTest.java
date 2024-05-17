@@ -137,14 +137,38 @@ class CurrencyServiceTest {
   @DisplayName("Convert Success")
   void convertExchangeComesFromAPI() {
     ConvertCurrencyRequest request = ConvertCurrencyRequest.builder().to("USD").from("BRL").amount(BigDecimal.ONE).build();
-    CurrencyAPIResponse obj = CurrencyAPIResponse.builder().low(BigDecimal.TEN).build();
-    Map<String, CurrencyAPIResponse> response = new HashMap<>();
-    response.put("USDBRL", obj);
+    Map<String, CurrencyAPIResponse> response =
+            Map.of(
+                    "USDBRL",
+                    CurrencyAPIResponse.builder().bid(BigDecimal.TEN).build()
+            );
+
 
     Mockito.when(currencyRepository.findByName(Mockito.anyString())).thenReturn(coins.get(0));
     Mockito.when(currencyClient.getCurrency(Mockito.anyString())).thenReturn(response);
 
     Assertions.assertEquals(BigDecimal.TEN, currencyService.convertWithAwesomeApi(request).getAmount());
     Mockito.verify(currencyRepository, Mockito.times(1)).findByName(Mockito.anyString());
+  }
+  @Test
+  @DisplayName("Exchange not found for coin")
+  void convertExchangeNotFoundWithAPI() {
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder().to("BTC").from("DMA").amount(BigDecimal.ONE).build();
+
+    Mockito.when(currencyRepository.findByName("DMA")).thenReturn(coins.get(0));
+
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class, () -> currencyService.convertWithAwesomeApi(request));
+    Assertions.assertEquals("Exchange BTC not found for DMA", exception.getMessage());
+
+  }
+
+  @Test
+  @DisplayName("Convert coin not found")
+  void convertCoinNotFoundWithAPI() {
+
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder().to("BTC").from("DMA").amount(BigDecimal.ONE).build();
+
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class, () -> currencyService.convertWithAwesomeApi(request));
+    Assertions.assertEquals("Coin not found: DMA", exception.getMessage());
   }
 }

@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 
 import java.util.Map;
 
-@FeignClient(name = "currency-api", url = "https://economia.awesomeapi.com.br")
+@FeignClient(name = "currency-api", url = "https://economia.awesomeapi.com.br/json")
 public interface CurrencyClient {
   @GetMapping("/last/{coin}")
   Map<String, CurrencyAPIResponse> getCurrency(@PathVariable("coin") String code);

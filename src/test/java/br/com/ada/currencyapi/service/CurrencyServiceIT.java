@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
@@ -33,9 +34,8 @@ class CurrencyServiceIT {
     currencies.add(Currency.builder()
             .name("BTC")
             .description("Bitcoin")
-            .exchanges(new HashMap<>())
+            .exchanges(Map.of("USD", BigDecimal.valueOf(0.1)))
             .build());
-    currencies.get(0).getExchanges().put("USD", BigDecimal.valueOf(0.1));
     currencies.add(Currency.builder()
             .name("BRL")
             .description("Real")
@@ -180,6 +180,33 @@ class CurrencyServiceIT {
     ConvertCurrencyResponse response = currencyService.convertWithAwesomeApi(request);
 
     Assertions.assertNotNull(response);
+  }
+  @Test
+  @DisplayName("Convert currency That Does Not Exists")
+  void convertNotExistsWithAPI() {
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder()
+            .to("USD")
+            .from("DMA")//not exist
+            .amount(BigDecimal.TEN).build();
+
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class,
+            () -> currencyService.convertWithAwesomeApi(request));
+
+    Assertions.assertEquals("Coin not found: DMA", exception.getMessage());
+  }
+
+  @Test
+  @DisplayName("Convert From Exist currency to Not Exist currency")
+  void convertFromExistToNotExistWithAPI() {
+    ConvertCurrencyRequest request = ConvertCurrencyRequest.builder()
+            .to("DMA") //not exist
+            .from("USD")
+            .amount(BigDecimal.TEN).build();
+
+    CoinNotFoundException exception = Assertions.assertThrows(CoinNotFoundException.class,
+            () -> currencyService.convertWithAwesomeApi(request));
+
+    Assertions.assertEquals("Exchange DMA not found for USD", exception.getMessage());
   }
 
 }

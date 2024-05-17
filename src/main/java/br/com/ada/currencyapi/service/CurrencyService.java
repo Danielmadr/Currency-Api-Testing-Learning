@@ -98,12 +98,11 @@ public class CurrencyService {
         }
 
         String tag = request.getTo() + "-" + request.getFrom();
-        BigDecimal exchange = currencyClient.getCurrency(tag).get(tag.replace("-", "")).low();
-
-        if (Objects.isNull(exchange)) {
+        try {
+            BigDecimal exchange = currencyClient.getCurrency(tag).get(tag.replace("-", "")).bid();
+            return request.getAmount().multiply(exchange);
+        }catch (Exception e){
             throw new CoinNotFoundException(String.format("Exchange %s not found for %s", request.getTo(), request.getFrom()));
         }
-
-        return request.getAmount().multiply(exchange);
     }
 }
