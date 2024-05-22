@@ -59,6 +59,11 @@
             <version>4.1.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>4.21.0</version> <!-- Use a versão mais recente -->
+        </dependency>
     </dependencies>
     <build>
         <plugins>
@@ -118,25 +123,6 @@
                         </configuration>
                     </execution>
                 </executions>
-                <!--                <configuration>-->
-                <!--                    <excludes>-->
-                <!--                        <exclude>br/com/ada/domain/*</exclude>-->
-                <!--                        <exclude>br/com/ada/exception/*</exclude>-->
-                <!--                        <exclude>br/com/ada/CurrencyApiApplication.class</exclude>-->
-                <!--                    </excludes>-->
-                <!--                    <rules>-->
-                <!--                        <rule>-->
-                <!--                            <element>BUNDLE</element>-->
-                <!--                            <limits>-->
-                <!--                                <limit>-->
-                <!--                                    <counter>LINE</counter>-->
-                <!--                                    <value>COVEREDRATIO</value>-->
-                <!--                                    <minimum>1</minimum>-->
-                <!--                                </limit>-->
-                <!--                            </limits>-->
-                <!--                        </rule>-->
-                <!--                    </rules>-->
-                <!--                </configuration>-->
             </plugin>
         </plugins>
     </build>
